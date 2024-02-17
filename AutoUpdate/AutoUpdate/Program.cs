@@ -11,12 +11,13 @@ var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirect
 
 foreach (var directory in directories)
 {
-    if (!directory.EndsWith("tflint"))
-    {
-        continue;
-    }
+    //if (!directory.EndsWith("tflint"))
+    //{
+    //    continue;
+    //}
 
     Console.WriteLine(directory);
+    Console.WriteLine("=====================================");
 
     var iss = InitialSessionState.CreateDefault2();
     iss.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.RemoteSigned;
@@ -44,11 +45,11 @@ foreach (var directory in directories)
         Console.WriteLine("Verbose: " + ps.Streams.Verbose[args.Index]);
     };
 
-    // Delete any existing .nupkg files
-    var nupkgFiles = Directory.GetFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly);
-    foreach (var file in nupkgFiles)
+    // Skip this directory if any existing .nupkg files
+    if (Directory.EnumerateFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).Any())
     {
-        File.Delete(file);
+        Console.WriteLine("\tSkipping directory with existing .nupkg file");
+        continue;
     }
 
     // Set the working directory
@@ -59,10 +60,14 @@ foreach (var directory in directories)
 
     var result1 = ps.Invoke();
 
-    var result = ps.AddScript("Get-Module").Invoke();
-
+    try { 
     var result4 = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
         .Invoke();
+    } catch (Exception ex)
+    {
+        Console.WriteLine(ex.Message);
+        continue;
+    }
 
     // Check if .nupkg file exists
     var nupkgFile = Directory.GetFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).FirstOrDefault();
@@ -109,5 +114,5 @@ foreach (var directory in directories)
     {
         Console.WriteLine("No nupkg file found");
     }
-    break;
+    //break;
 }
