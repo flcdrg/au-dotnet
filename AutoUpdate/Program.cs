@@ -153,9 +153,9 @@ if (count > 0)
     // git commit -m "$message`n[skip ci] $gist_url $snippet_url" --allow-empty
     // git push
 
-    string commitMessage = $"AU: {count} updated\n[skip ci]";
-    Console.WriteLine($"git {commitMessage}");
-    RunProcess(repoPath, "git", commitMessage, true, TimeSpan.FromMinutes(1));
+    string commitArguments = $"commit -m 'AU: {count} updated\n[skip ci]'";
+    Console.WriteLine($"git {commitArguments}");
+    RunProcess(repoPath, "git", commitArguments, true, TimeSpan.FromMinutes(1));
 }
 
 return;
