@@ -58,8 +58,10 @@ foreach (var directory in directories)
         // Skip this directory if any existing .nupkg files
         if (Directory.EnumerateFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).Any())
         {
+#if RELEASE
             Console.WriteLine("\tSkipping directory with existing .nupkg file");
             continue;
+#endif
         }
 
         // Set the working directory
@@ -121,9 +123,13 @@ foreach (var directory in directories)
             {
                 RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
 
-                string tagName = $"{auPackage.Properties["Name"]}-{auPackage.Properties["NuspecVersion"]}";
+                string tagName = $"{auPackage.Properties["Name"].Value}-{auPackage.Properties["NuspecVersion"].Value}";
 
-                RunProcess(directory, "git.exe", $"tag -a {tagName} -m \"{tagName}\"", true, TimeSpan.FromSeconds(10));
+                string tagArguments = $"tag -a {tagName} -m '{tagName}'";
+
+                Console.WriteLine($"git {tagArguments}");
+
+                RunProcess(directory, "git.exe", tagArguments, true, TimeSpan.FromSeconds(10));
             }
         }
         else
