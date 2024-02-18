@@ -86,6 +86,12 @@ jobs:
         repository: 'flcdrg/au-packages'
         path: 'packages'
 
+    - name: Configure Git
+      run: |
+        git config user.email "david@gardiner.net.au"
+        git config user.name "David Gardiner"
+      working-directory: packages
+
     - name: Run
       run: |
         dotnet run
