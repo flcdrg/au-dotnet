@@ -71,11 +71,13 @@ jobs:
         ref: 'fix-warnings'
         persist-credentials: false
 
-    - name: Install PowerShell module
+    - name: Install
       run: |
         ./install.ps1
 
         Get-InstalledModule | Select-Object Name, Version, InstalledLocation
+
+        choco install vt-cli -y
       shell: pwsh
       working-directory: chocolatey-au
 

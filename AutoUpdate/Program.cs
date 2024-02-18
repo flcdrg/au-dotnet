@@ -23,24 +23,24 @@ foreach (var directory in directories)
         
         var ps = PowerShell.Create(iss);
 
-        ps.Streams.Debug.DataAdded += (sender, args) =>
+        ps.Streams.Debug.DataAdded += (_, args) =>
         {
             Console.WriteLine("Debug: " + args);
         };
-        ps.Streams.Error.DataAdded += (sender, args) =>
+        ps.Streams.Error.DataAdded += (_, args) =>
         {
             // ::error file={name},line={line},endLine={endLine},title={title}::{message}
             Console.WriteLine($"::error file={directory}::{ps.Streams.Error[args.Index]}");
         };
-        ps.Streams.Warning.DataAdded += (sender, args) =>
+        ps.Streams.Warning.DataAdded += (_, args) =>
         {
             Console.WriteLine("Warning: " + ps.Streams.Warning[args.Index]);
         };
-        ps.Streams.Information.DataAdded += (sender, args) =>
+        ps.Streams.Information.DataAdded += (_, args) =>
         {
             Console.WriteLine("Information: " + ps.Streams.Information[args.Index]);
         };
-        ps.Streams.Verbose.DataAdded += (sender, args) =>
+        ps.Streams.Verbose.DataAdded += (_, args) =>
         {
             Console.WriteLine("Verbose: " + ps.Streams.Verbose[args.Index]);
         };
@@ -54,12 +54,9 @@ foreach (var directory in directories)
 
         // Set the working directory
         ps.AddCommand("Set-Location").AddParameter("Path", directory).Invoke();
-        var result3 = ps.AddScript("Get-Location").Invoke();
-
-        var result1 = ps.Invoke();
 
         try { 
-            var result4 = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
+            var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
             .Invoke();
         } catch (Exception ex)
         {
@@ -75,38 +72,12 @@ foreach (var directory in directories)
             // try pushing to chocolatey
             Console.WriteLine($"choco push {nupkgFile}");
 
-            // if that succeeds, then git commit
-            // run git.exe
-            var git = new Process
+            var result = RunProcess(directory, "choco.exe", $"search {directory}", false, TimeSpan.FromMinutes(1));
+
+            if (result)
             {
-                StartInfo = new ProcessStartInfo
-                {
-                    FileName = "git.exe",
-                    Arguments = "add *",
-                    WorkingDirectory = directory,
-                    UseShellExecute = false,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true,
-                    CreateNoWindow = true
-                }
-            };
-
-            string eOut = string.Empty;
-            git.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-            { eOut += e.Data; });
-
-            git.Start();
-
-            // To avoid deadlocks, use an asynchronous read operation on at least one of the streams.  
-            git.BeginErrorReadLine();
-
-            var output = git.StandardOutput.ReadToEnd();
-
-            git.WaitForExit(TimeSpan.FromSeconds(30));
-
-            // get output from git process
-            Console.WriteLine(output);
-            Console.WriteLine($"\nError stream: {eOut}");
+                RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
+            }
         }
         else
         {
@@ -116,4 +87,43 @@ foreach (var directory in directories)
     } finally {
         Console.WriteLine("::endgroup::");
     }
+}
+
+bool RunProcess(string workingDirectory, string executable, string arguments, bool errorsAsWarnings, TimeSpan timeout)
+{
+    // if that succeeds, then git commit
+    // run git.exe
+    var p = new Process
+    {
+        StartInfo = new ProcessStartInfo
+        {
+            FileName = executable,
+            Arguments = arguments,
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            CreateNoWindow = true
+        }
+    };
+
+    string eOut = string.Empty;
+    p.ErrorDataReceived += (_, e) =>
+        { eOut += e.Data; };
+
+    p.Start();
+
+    // To avoid deadlocks, use an asynchronous read operation on at least one of the streams.  
+    p.BeginErrorReadLine();
+
+    var output = p.StandardOutput.ReadToEnd();
+
+    p.WaitForExit(timeout);
+
+    // get output from process
+    Console.WriteLine(output);
+    // ::warning file={name},line={line},endLine={endLine},title={title}::{message}
+    Console.WriteLine($"::{(errorsAsWarnings ? "warning" : "error")} file={workingDirectory}::{eOut}");
+
+    return p.ExitCode == 0;
 }
