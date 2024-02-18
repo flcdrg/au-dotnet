@@ -29,7 +29,8 @@ foreach (var directory in directories)
         };
         ps.Streams.Error.DataAdded += (sender, args) =>
         {
-            Console.WriteLine("Error: " + ps.Streams.Error[args.Index]);
+            // ::error file={name},line={line},endLine={endLine},title={title}::{message}
+            Console.WriteLine($"::error file={directory}::{ps.Streams.Error[args.Index]}");
         };
         ps.Streams.Warning.DataAdded += (sender, args) =>
         {

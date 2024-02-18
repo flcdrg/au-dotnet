@@ -45,7 +45,7 @@ jobs:
         dotnet-version: 8.0.200
 
     - name: Cache dependencies
-      uses: actions/cache@v2
+      uses: actions/cache@v4
       with:
         path: autoupdate/.nuget
         key: ${{ runner.os }}-dotnet-${{ hashFiles('**/autoupdate/*.csproj') }}
@@ -90,3 +90,9 @@ jobs:
       working-directory: autoupdate/AutoUpdate
       env:
         PACKAGES_REPO: '${{ github.workspace }}/packages'
+
+    - name: Status
+      run: |
+        git status
+        ls -alR *.nupkgs
+      working-directory: packages
