@@ -75,6 +75,7 @@ foreach (var directory in directories)
             var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
             .Invoke();
 
+            // Expect an AUPackage object to be returned
             if (output.Count > 0)
             {
                 if (output.Count > 1)
@@ -85,8 +86,7 @@ foreach (var directory in directories)
                 auPackage = output[0];
                 auPackage.Properties.ToList().ForEach(p => Console.WriteLine($"{p.Name}: {p.Value}"));
 
-                // Streams
-
+                // Streams logging
                 if (auPackage.Properties["Streams"].Value is OrderedDictionary streams)
                 {
                     foreach (DictionaryEntry stream in streams)
@@ -147,13 +147,7 @@ foreach (var directory in directories)
 
 if (count > 0)
 {
-    //     $message = "AU: $($packages.Length) updated - $($packages | ForEach-Object Name)"
-    // $gist_url = $Info.plugin_results.Gist -split '\n' | Select-Object -Last 1
-    // $snippet_url = $Info.plugin_results.Snippet -split '\n' | Select-Object -Last 1
-    // git commit -m "$message`n[skip ci] $gist_url $snippet_url" --allow-empty
-    // git push
-
-    string commitArguments = $"commit -m 'AU: {count} updated\n[skip ci]'";
+    string commitArguments = $"commit -m \"AU-dotnet: {count} updated\n[skip ci]\"";
     Console.WriteLine($"git {commitArguments}");
     RunProcess(repoPath, "git", commitArguments, true, TimeSpan.FromMinutes(1));
 }
