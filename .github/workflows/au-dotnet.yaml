@@ -30,6 +30,8 @@ jobs:
       DOTNET_MULTILEVEL_LOOKUP: 0
       DOTNET_SYSTEM_CONSOLE_ALLOW_ANSI_COLOR_REDIRECTION: true
       TERM: xterm
+      NUGET_PACKAGES: ${{ github.workspace }}/.nuget/packages
+      Configuration: Release
 
     steps:
     - uses: actions/checkout@v4
@@ -42,12 +44,20 @@ jobs:
       with:
         dotnet-version: 8.0.200
 
+    - name: Cache dependencies
+      uses: actions/cache@v2
+      with:
+        path: autoupdate/.nuget
+        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/autoupdate/*.csproj') }}
+        restore-keys: |
+          ${{ runner.os }}-dotnet-
+
     - name: Restore
       run: dotnet restore
       working-directory: autoupdate
 
     - name: Build
-      run: dotnet build --configuration Release --no-restore
+      run: dotnet build --no-restore
       working-directory: autoupdate
 
     - name: Test
@@ -77,6 +87,6 @@ jobs:
     - name: Run
       run: |
         dotnet run
-      working-directory: autoupdate
+      working-directory: autoupdate/AutoUpdate
       env:
         PACKAGES_REPO: '$GITHUB_WORKSPACE/packages'
