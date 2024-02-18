@@ -9,6 +9,7 @@ using System.Management.Automation.Runspaces;
 // Get all subdirectories that have an existing 'update.ps1' file
 string repoPath = Environment.GetEnvironmentVariable("PACKAGES_REPO") ?? @"c:\dev\git\au-packages";
 
+int count = 0;
 
 var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirectoryOnly)
     .Where(d => File.Exists(Path.Combine(d, "update.ps1")));
@@ -130,6 +131,8 @@ foreach (var directory in directories)
                 Console.WriteLine($"git {tagArguments}");
 
                 RunProcess(directory, "git.exe", tagArguments, true, TimeSpan.FromSeconds(10));
+
+                count++;
             }
         }
         else
@@ -140,6 +143,19 @@ foreach (var directory in directories)
     } finally {
         Console.WriteLine("::endgroup::");
     }
+}
+
+if (count > 0)
+{
+    //     $message = "AU: $($packages.Length) updated - $($packages | ForEach-Object Name)"
+    // $gist_url = $Info.plugin_results.Gist -split '\n' | Select-Object -Last 1
+    // $snippet_url = $Info.plugin_results.Snippet -split '\n' | Select-Object -Last 1
+    // git commit -m "$message`n[skip ci] $gist_url $snippet_url" --allow-empty
+    // git push
+
+    string commitMessage = $"AU: {count} updated\n[skip ci]";
+    Console.WriteLine($"git {commitMessage}");
+    RunProcess(repoPath, "git", commitMessage, true, TimeSpan.FromMinutes(1));
 }
 
 return;
