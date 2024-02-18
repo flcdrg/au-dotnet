@@ -4,18 +4,14 @@ using System.Management.Automation;
 using System.Management.Automation.Runspaces;
 
 // Get all subdirectories that have an existing 'update.ps1' file
-const string repoPath = "c:\\dev\\git\\au-packages";
+string repoPath = Environment.GetEnvironmentVariable("PACKAGES_REPO") ?? @"c:\dev\git\au-packages";
+
 
 var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirectoryOnly)
     .Where(d => File.Exists(Path.Combine(d, "update.ps1")));
 
 foreach (var directory in directories)
 {
-    //if (!directory.EndsWith("tflint"))
-    //{
-    //    continue;
-    //}
-
     Console.WriteLine(directory);
     Console.WriteLine("=====================================");
 
@@ -56,12 +52,10 @@ foreach (var directory in directories)
     ps.AddCommand("Set-Location").AddParameter("Path", directory).Invoke();
     var result3 = ps.AddScript("Get-Location").Invoke();
 
-    ps.AddScript("Import-Module C:\\dev\\git\\chocolatey-au\\AU");
-
     var result1 = ps.Invoke();
 
     try { 
-    var result4 = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
+        var result4 = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
         .Invoke();
     } catch (Exception ex)
     {
