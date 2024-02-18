@@ -15,10 +15,12 @@ var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirect
 
 foreach (var directory in directories)
 {
+#if DEBUG
     if (!directory.EndsWith("resharper-clt.portable"))
     {
         continue;
     }
+#endif
 
     Console.WriteLine($"::group::{directory}");
 
