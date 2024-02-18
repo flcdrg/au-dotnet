@@ -42,11 +42,11 @@ foreach (var directory in directories)
         ps.Streams.Error.DataAdded += (_, args) =>
         {
             // ::error file={name},line={line},endLine={endLine},title={title}::{message}
-            Console.WriteLine($"::error file={directory}::{ps.Streams.Error[args.Index]}");
+            Console.WriteLine($"::error ::{ps.Streams.Error[args.Index]}");
         };
         ps.Streams.Warning.DataAdded += (_, args) =>
         {
-            Console.WriteLine("Warning: " + ps.Streams.Warning[args.Index]);
+            Console.WriteLine($"::warning ::{ps.Streams.Warning[args.Index]}");
         };
         ps.Streams.Information.DataAdded += (_, args) =>
         {
@@ -199,7 +199,7 @@ bool RunProcess(string workingDirectory, string executable, string arguments, bo
     // get output from process
     Console.WriteLine(output);
 
-    Console.WriteLine($"::{(errorsAsWarnings ? "warning" : "error")} file={workingDirectory}::{eOut}");
+    Console.WriteLine($"::{(errorsAsWarnings ? "warning" : "error")} ::{eOut}");
 
     return p.ExitCode == 0;
 }
