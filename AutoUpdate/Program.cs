@@ -8,6 +8,7 @@ using System.Management.Automation.Runspaces;
 
 // Get all subdirectories that have an existing 'update.ps1' file
 string repoPath = Environment.GetEnvironmentVariable("PACKAGES_REPO") ?? @"c:\dev\git\au-packages";
+string? chocolateyApiKey = Environment.GetEnvironmentVariable("api_key");
 
 int count = 0;
 
@@ -116,9 +117,17 @@ foreach (var directory in directories)
         if (nupkgFile != null && auPackage != null)
         {
             // try pushing to chocolatey
-            Console.WriteLine($"choco push {nupkgFile}");
-
-            var result = RunProcess(directory, "choco.exe", $"search {directory}", false, TimeSpan.FromMinutes(1));
+            bool result = true;
+            if (chocolateyApiKey != null)
+            {
+                string chocoArguments = $"push {nupkgFile} --api-key {chocolateyApiKey} --source https://push.chocolatey.org/";
+                Console.WriteLine($"choco {chocoArguments}");
+                result = RunProcess(directory, "choco.exe", chocoArguments, false, TimeSpan.FromMinutes(3));
+            }
+            else
+            {
+                Console.WriteLine($"choco push {nupkgFile}");
+            }
 
             if (result)
             {
@@ -187,7 +196,7 @@ bool RunProcess(string workingDirectory, string executable, string arguments, bo
 
     // get output from process
     Console.WriteLine(output);
-    // ::warning file={name},line={line},endLine={endLine},title={title}::{message}
+
     Console.WriteLine($"::{(errorsAsWarnings ? "warning" : "error")} file={workingDirectory}::{eOut}");
 
     return p.ExitCode == 0;
