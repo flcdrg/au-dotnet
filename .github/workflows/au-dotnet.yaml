@@ -103,7 +103,7 @@ jobs:
       run: |
         git status
 
-        git log --max-count 1
+        git log --max-count 1 --pretty=medium
 
         Get-ChildItem -Recurse *.nupkg | Select-Object -ExpandProperty FullName
       working-directory: packages
