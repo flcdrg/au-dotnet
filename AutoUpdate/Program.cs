@@ -1,4 +1,7 @@
 ﻿// See https://aka.ms/new-console-template for more information
+
+using System.Collections;
+using System.Collections.Specialized;
 using System.Diagnostics;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
@@ -12,6 +15,11 @@ var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirect
 
 foreach (var directory in directories)
 {
+    if (!directory.EndsWith("resharper-clt.portable"))
+    {
+        continue;
+    }
+
     Console.WriteLine($"::group::{directory}");
 
     try {
@@ -38,7 +46,7 @@ foreach (var directory in directories)
         };
         ps.Streams.Information.DataAdded += (_, args) =>
         {
-            Console.WriteLine("Information: " + ps.Streams.Information[args.Index]);
+            Console.WriteLine(ps.Streams.Information[args.Index]);
         };
         ps.Streams.Verbose.DataAdded += (_, args) =>
         {
@@ -58,9 +66,39 @@ foreach (var directory in directories)
         try { 
             var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
             .Invoke();
+
+            if (output.Count > 0)
+            {
+                if (output.Count > 1)
+                {
+                    Console.WriteLine("Multiple objects returned");
+                }
+
+                var obj = output[0];
+                obj.Properties.ToList().ForEach(p => Console.WriteLine($"{p.Name}: {p.Value}"));
+
+                // Streams
+
+                if (obj.Properties["Streams"].Value is OrderedDictionary streams)
+                {
+                    foreach (DictionaryEntry stream in streams)
+                    {
+                        Console.WriteLine($"{stream.Key}: {stream.Value}");
+                        if (stream.Value is Hashtable streamObj)
+                        {
+                            streamObj.Keys.Cast<string>().ToList().ForEach(k => Console.WriteLine($"\t{k}: {streamObj[k]}"));
+                        }
+                    }
+                }
+            }
         } catch (Exception ex)
         {
             Console.WriteLine(ex.Message);
+            continue;
+        }
+
+        if (ps.HadErrors)
+        {
             continue;
         }
 
@@ -88,6 +126,8 @@ foreach (var directory in directories)
         Console.WriteLine("::endgroup::");
     }
 }
+
+return;
 
 bool RunProcess(string workingDirectory, string executable, string arguments, bool errorsAsWarnings, TimeSpan timeout)
 {

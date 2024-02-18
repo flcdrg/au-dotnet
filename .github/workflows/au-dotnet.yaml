@@ -96,5 +96,6 @@ jobs:
     - name: Status
       run: |
         git status
-        Get-ChildItem -Recurse *.nupkgs | Select-Object -ExpandProperty FullName
+
+        Get-ChildItem -Recurse *.nupkg | Select-Object -ExpandProperty FullName
       working-directory: packages
