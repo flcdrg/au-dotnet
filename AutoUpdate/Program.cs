@@ -18,7 +18,7 @@ var directories = Directory.GetDirectories(repoPath, "*", SearchOption.TopDirect
 foreach (var directory in directories)
 {
 #if DEBUG
-    if (!directory.EndsWith("resharper-clt.portable"))
+    if (!directory.EndsWith("iguana"))
     {
         continue;
     }
@@ -72,7 +72,10 @@ foreach (var directory in directories)
         PSObject? auPackage = null;
 
         try
-        { 
+        {
+            // Get detailed error messages
+            ps.AddScript("$ErrorView = 'DetailedView'").Invoke();
+
             var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
             .Invoke();
 
@@ -85,6 +88,14 @@ foreach (var directory in directories)
                 }
 
                 auPackage = output[0];
+
+                // Handle Ignore
+                var text = auPackage.BaseObject as string;
+                if (text != null && text.Equals("Ignore", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    continue;
+                }
+
                 auPackage.Properties.ToList().ForEach(p => Console.WriteLine($"{p.Name}: {p.Value}"));
 
                 // Streams logging
