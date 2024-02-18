@@ -133,7 +133,9 @@ foreach (var directory in directories)
             {
                 RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
 
-                string tagName = $"{auPackage.Properties["Name"].Value}-{auPackage.Properties["NuspecVersion"].Value}";
+                // RemoteVersion: 2024.1-EAP05
+                // NuspecVersion: 2024.1-EAP02
+                string tagName = $"{auPackage.Properties["Name"].Value}-{auPackage.Properties["RemoteVersion"].Value}";
 
                 string tagArguments = $"tag -a {tagName} -m '{tagName}'";
 
