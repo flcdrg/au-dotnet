@@ -67,5 +67,13 @@ jobs:
     - name: Install PowerShell module
       run: |
         ./install.ps1
+
+        Get-InstalledModule | Select-Object Name, Version, InstalledLocation
       shell: pwsh
       working-directory: chocolatey-au
+
+    - name: Run
+      run: |
+        dotnet run
+      env:
+        PACKAGES_REPO: '$GITHUB_WORKSPACE/packages'
