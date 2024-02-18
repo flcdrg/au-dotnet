@@ -120,13 +120,13 @@ foreach (var directory in directories)
             bool result = true;
             if (chocolateyApiKey != null)
             {
-                string chocoArguments = $"push {nupkgFile} --api-key {chocolateyApiKey} --source https://push.chocolatey.org/";
+                string chocoArguments = $"push {nupkgFile} --api-key {chocolateyApiKey} --source https://push.chocolatey.org/ --verbose";
                 Console.WriteLine($"choco {chocoArguments}");
                 result = RunProcess(directory, "choco.exe", chocoArguments, false, TimeSpan.FromMinutes(3));
             }
             else
             {
-                Console.WriteLine($"choco push {nupkgFile}");
+                Console.WriteLine($"[whatif] choco push {nupkgFile}");
             }
 
             if (result)
