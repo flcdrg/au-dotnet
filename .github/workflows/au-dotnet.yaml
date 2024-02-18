@@ -89,4 +89,4 @@ jobs:
         dotnet run
       working-directory: autoupdate/AutoUpdate
       env:
-        PACKAGES_REPO: '$GITHUB_WORKSPACE/packages'
+        PACKAGES_REPO: '${{ github.workspace }}/packages'
