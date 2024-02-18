@@ -97,5 +97,7 @@ jobs:
       run: |
         git status
 
+        git tag --list
+
         Get-ChildItem -Recurse *.nupkg | Select-Object -ExpandProperty FullName
       working-directory: packages

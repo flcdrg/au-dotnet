@@ -65,7 +65,10 @@ foreach (var directory in directories)
         // Set the working directory
         ps.AddCommand("Set-Location").AddParameter("Path", directory).Invoke();
 
-        try { 
+        PSObject? auPackage = null;
+
+        try
+        { 
             var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
             .Invoke();
 
@@ -76,12 +79,12 @@ foreach (var directory in directories)
                     Console.WriteLine("Multiple objects returned");
                 }
 
-                var obj = output[0];
-                obj.Properties.ToList().ForEach(p => Console.WriteLine($"{p.Name}: {p.Value}"));
+                auPackage = output[0];
+                auPackage.Properties.ToList().ForEach(p => Console.WriteLine($"{p.Name}: {p.Value}"));
 
                 // Streams
 
-                if (obj.Properties["Streams"].Value is OrderedDictionary streams)
+                if (auPackage.Properties["Streams"].Value is OrderedDictionary streams)
                 {
                     foreach (DictionaryEntry stream in streams)
                     {
@@ -107,7 +110,7 @@ foreach (var directory in directories)
         // Check if .nupkg file exists
         var nupkgFile = Directory.GetFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).FirstOrDefault();
 
-        if (nupkgFile != null)
+        if (nupkgFile != null && auPackage != null)
         {
             // try pushing to chocolatey
             Console.WriteLine($"choco push {nupkgFile}");
@@ -117,6 +120,10 @@ foreach (var directory in directories)
             if (result)
             {
                 RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
+
+                string tagName = $"{auPackage.Properties["Name"]}-{auPackage.Properties["NuspecVersion"]}";
+
+                RunProcess(directory, "git.exe", $"tag -a {tagName} -m \"{tagName}\"", true, TimeSpan.FromSeconds(10));
             }
         }
         else
