@@ -13,7 +13,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
     private readonly string? _chocolateyApiKey = Environment.GetEnvironmentVariable("api_key");
     private readonly string _repoPath = configuration["PACKAGES_REPO"] ?? @"c:\dev\git\au-packages";
 
-    public Task StartAsync(CancellationToken cancellationToken)
+    public async Task StartAsync(CancellationToken cancellationToken)
     {
         // Get all subdirectories that have an existing 'update.ps1' file
         int count = 0;
@@ -216,10 +216,9 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             core.Summary.AddRawMarkdown("No packages were updated");
         }
 
+        await core.Summary.WriteAsync(new SummaryWriteOptions { Overwrite = true });
 
         lifetime.StopApplication();
-
-        return Task.CompletedTask;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
