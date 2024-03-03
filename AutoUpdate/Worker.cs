@@ -8,7 +8,7 @@ using Actions.Core.Summaries;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 
-internal class Worker(ICoreService core, IConfiguration configuration) : IHostedService
+internal class Worker(ICoreService core, IConfiguration configuration, IHostApplicationLifetime lifetime) : IHostedService
 {
     private readonly string? _chocolateyApiKey = Environment.GetEnvironmentVariable("api_key");
     private readonly string _repoPath = configuration["PACKAGES_REPO"] ?? @"c:\dev\git\au-packages";
@@ -30,12 +30,12 @@ internal class Worker(ICoreService core, IConfiguration configuration) : IHosted
                 break;
             }
 
-//#if DEBUG
-//            if (!directory.EndsWith("iguana"))
-//            {
-//                continue;
-//            }
-//#endif
+#if DEBUG
+            if (!directory.EndsWith("iguana"))
+            {
+                continue;
+            }
+#endif
 
             core.StartGroup(directory);
 
@@ -215,6 +215,9 @@ internal class Worker(ICoreService core, IConfiguration configuration) : IHosted
         {
             core.Summary.AddRawMarkdown("No packages were updated");
         }
+
+
+        lifetime.StopApplication();
 
         return Task.CompletedTask;
     }
