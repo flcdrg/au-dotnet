@@ -209,7 +209,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             var table = new SummaryTable(new SummaryTableRow([new("Package"), new SummaryTableCell("Version")]), summaryRows.ToArray());
 
             core.Summary.AddMarkdownHeading("Updated Packages");
-            core.Summary.AddRawMarkdown($"{count} packages were updated:");
+            core.Summary.AddRawMarkdown($"{count} packages were updated:", true);
             core.Summary.AddMarkdownTable(table);
         } else
         {
