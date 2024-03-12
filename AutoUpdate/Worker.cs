@@ -26,7 +26,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         {
             if (cancellationToken.IsCancellationRequested)
             {
-                core.Warning("Cancellation requested");
+                core.WriteWarning("Cancellation requested");
                 break;
             }
 
@@ -48,30 +48,30 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                 ps.Streams.Debug.DataAdded += (_, args) =>
                 {
-                    core.Debug(ps.Streams.Debug[args.Index].ToString());
+                    core.WriteDebug(ps.Streams.Debug[args.Index].ToString());
                 };
                 ps.Streams.Error.DataAdded += (_, args) =>
                 {
-                    core.Error(ps.Streams.Error[args.Index].ToString());
+                    core.WriteError(ps.Streams.Error[args.Index].ToString());
                 };
                 ps.Streams.Warning.DataAdded += (_, args) =>
                 {
-                    core.Warning(ps.Streams.Warning[args.Index].ToString());
+                    core.WriteWarning(ps.Streams.Warning[args.Index].ToString());
                 };
                 ps.Streams.Information.DataAdded += (_, args) =>
                 {
-                    core.Info(ps.Streams.Information[args.Index].ToString());
+                    core.WriteInfo(ps.Streams.Information[args.Index].ToString());
                 };
                 ps.Streams.Verbose.DataAdded += (_, args) =>
                 {
-                    core.Debug(ps.Streams.Verbose[args.Index].ToString());
+                    core.WriteDebug(ps.Streams.Verbose[args.Index].ToString());
                 };
 
                 // Skip this directory if any existing .nupkg files
                 if (Directory.EnumerateFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).Any())
                 {
 #if RELEASE
-                    core.Info("Skipping directory with existing .nupkg file");
+                    core.WriteInfo("Skipping directory with existing .nupkg file");
                     continue;
 #endif
                 }
@@ -94,7 +94,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     {
                         if (output.Count > 1)
                         {
-                            core.Info("Multiple objects returned");
+                            core.WriteInfo("Multiple objects returned");
                         }
 
                         auPackage = output[0];
@@ -160,12 +160,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     if (_chocolateyApiKey != null)
                     {
                         string chocoArguments = $"push {nupkgFile} --api-key {_chocolateyApiKey} --source https://push.chocolatey.org/ --verbose";
-                        core.Debug($"choco {chocoArguments}");
+                        core.WriteDebug($"choco {chocoArguments}");
                         result = RunProcess(directory, "choco.exe", chocoArguments, false, TimeSpan.FromMinutes(3));
                     }
                     else
                     {
-                        core.Debug($"[whatif] choco push {nupkgFile}");
+                        core.WriteDebug($"[whatif] choco push {nupkgFile}");
                     }
 
                     if (result)
@@ -179,7 +179,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                         string tagArguments = $"tag -a {tagName} -m '{tagName}'";
 
-                        core.Debug($"git {tagArguments}");
+                        core.WriteDebug($"git {tagArguments}");
 
                         RunProcess(directory, "git.exe", tagArguments, true, TimeSpan.FromSeconds(10));
 
@@ -256,14 +256,14 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         p.WaitForExit(timeout);
 
         // get output from process
-        core.Debug(output);
+        core.WriteDebug(output);
 
         if (errorsAsWarnings)
         {
-            core.Warning(eOut);
+            core.WriteWarning(eOut);
         } else
         {
-            core.Error(eOut);
+            core.WriteError(eOut);
         }
 
         return p.ExitCode == 0;
