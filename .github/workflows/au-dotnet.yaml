@@ -16,10 +16,10 @@ on:
       - '**/*.gitignore'
       - '**/*.gitattributes'
   workflow_dispatch:
-      
+
 jobs:
   build:
-    name: Build 
+    name: Build
     runs-on: windows-latest
     env:
       DOTNET_CLI_TELEMETRY_OPTOUT: 1
@@ -36,9 +36,32 @@ jobs:
     steps:
     - uses: actions/checkout@v4
       with:
+        repository: 'flcdrg/chocolatey-au'
+        path: 'chocolatey-au'
+        ref: 'simplify'
+        persist-credentials: false
+
+    - name: Install
+      run: |
+        $module_name = 'Chocolatey-AU'
+
+        $module_dst  = "$Env:ProgramFiles\PowerShell\Modules\$module_name"
+
+        New-Item -ItemType Directory "$module_dst" -ErrorAction Ignore | Out-Null
+
+        Copy-Item -Recurse -Force ./src/* $module_dst -Verbose
+
+        Get-InstalledModule | Select-Object Name, Version, InstalledLocation
+
+        choco install vt-cli -y
+      shell: pwsh
+      working-directory: chocolatey-au
+
+    - uses: actions/checkout@v4
+      with:
         path: 'autoupdate'
         persist-credentials: false
-      
+
     - name: Setup .NET SDK
       uses: actions/setup-dotnet@v4
       with:
@@ -63,23 +86,6 @@ jobs:
     - name: Test
       run: dotnet test
       working-directory: autoupdate
-
-    - uses: actions/checkout@v4
-      with:
-        repository: 'flcdrg/chocolatey-au'
-        path: 'chocolatey-au'
-        ref: 'simplify'
-        persist-credentials: false
-
-    - name: Install
-      run: |
-        ./install.ps1
-
-        Get-InstalledModule | Select-Object Name, Version, InstalledLocation
-
-        choco install vt-cli -y
-      shell: pwsh
-      working-directory: chocolatey-au
 
     - uses: actions/checkout@v4
       with:
