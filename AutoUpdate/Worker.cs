@@ -36,36 +36,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 continue;
             }
 #endif
-
+            
             core.StartGroup(directory);
 
             try
             {
-                var iss = InitialSessionState.CreateDefault2();
-                iss.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.RemoteSigned;
-
-                var ps = PowerShell.Create(iss);
-
-                ps.Streams.Debug.DataAdded += (_, args) =>
-                {
-                    core.WriteDebug(ps.Streams.Debug[args.Index].ToString());
-                };
-                ps.Streams.Error.DataAdded += (_, args) =>
-                {
-                    core.WriteError(ps.Streams.Error[args.Index].ToString());
-                };
-                ps.Streams.Warning.DataAdded += (_, args) =>
-                {
-                    core.WriteWarning(ps.Streams.Warning[args.Index].ToString());
-                };
-                ps.Streams.Information.DataAdded += (_, args) =>
-                {
-                    core.WriteInfo(ps.Streams.Information[args.Index].ToString());
-                };
-                ps.Streams.Verbose.DataAdded += (_, args) =>
-                {
-                    core.WriteDebug(ps.Streams.Verbose[args.Index].ToString());
-                };
+                var ps = CreatePowerShell();
 
                 // Skip this directory if any existing .nupkg files
                 if (Directory.EnumerateFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).Any())
@@ -86,7 +62,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     // Get detailed error messages
                     ps.AddScript("$ErrorView = 'DetailedView'").Invoke();
 
-                    var output = ps.AddScript(File.ReadAllText(Path.Combine(directory, "update.ps1")))
+                    var output = ps.AddScript(await File.ReadAllTextAsync(Path.Combine(directory, "update.ps1"), cancellationToken))
                     .Invoke();
 
                     // Expect an AUPackage object to be returned
@@ -219,6 +195,36 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         await core.Summary.WriteAsync(new SummaryWriteOptions { Overwrite = true });
 
         lifetime.StopApplication();
+    }
+
+    private PowerShell CreatePowerShell()
+    {
+        var iss = InitialSessionState.CreateDefault2();
+        iss.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.RemoteSigned;
+
+        var ps = PowerShell.Create(iss);
+
+        ps.Streams.Debug.DataAdded += (_, args) =>
+        {
+            core.WriteDebug(ps.Streams.Debug[args.Index].ToString());
+        };
+        ps.Streams.Error.DataAdded += (_, args) =>
+        {
+            core.WriteError(ps.Streams.Error[args.Index].ToString());
+        };
+        ps.Streams.Warning.DataAdded += (_, args) =>
+        {
+            core.WriteWarning(ps.Streams.Warning[args.Index].ToString());
+        };
+        ps.Streams.Information.DataAdded += (_, args) =>
+        {
+            core.WriteInfo(ps.Streams.Information[args.Index].ToString());
+        };
+        ps.Streams.Verbose.DataAdded += (_, args) =>
+        {
+            core.WriteDebug(ps.Streams.Verbose[args.Index].ToString());
+        };
+        return ps;
     }
 
     public Task StopAsync(CancellationToken cancellationToken)
