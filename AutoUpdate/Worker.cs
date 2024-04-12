@@ -30,12 +30,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 break;
             }
 
-#if DEBUG
-            if (!directory.EndsWith("iguana"))
-            {
-                continue;
-            }
-#endif
+//#if DEBUG
+//            if (!directory.EndsWith("sqltoolbelt"))
+//            {
+//                continue;
+//            }
+//#endif
             
             core.StartGroup(directory);
 
@@ -65,6 +65,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     var output = ps.AddScript(await File.ReadAllTextAsync(Path.Combine(directory, "update.ps1"), cancellationToken))
                     .Invoke();
 
+                    if (cancellationToken.IsCancellationRequested)
+                    {
+                        core.WriteWarning("Cancellation requested");
+                        break;
+                    }   
+
                     // Expect an AUPackage object to be returned
                     if (output.Count > 0)
                     {
@@ -81,6 +87,9 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                         {
                             continue;
                         }
+
+                        Console.WriteLine("Package properties");
+                        Console.WriteLine("------------------");
 
                         auPackage.Properties.ToList().ForEach(p => {
                             if (p.Value == null)
@@ -104,6 +113,8 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                         // Streams logging
                         if (auPackage.Properties["Streams"].Value is OrderedDictionary streams)
                         {
+                            Console.WriteLine("Stream properties");
+                            Console.WriteLine("-----------------");
                             foreach (DictionaryEntry stream in streams)
                             {
                                 Console.WriteLine($"{stream.Key}: {stream.Value}");
@@ -174,6 +185,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             {
                 core.EndGroup();
             }
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            core.WriteWarning("Cancellation requested");
+            return;
         }
 
         if (count > 0)
