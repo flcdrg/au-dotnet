@@ -1,4 +1,5 @@
 ﻿using Actions.Core.Extensions;
+using AutoUpdate;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

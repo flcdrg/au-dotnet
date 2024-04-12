@@ -1,12 +1,14 @@
-﻿using System.Collections.Specialized;
-using System.Collections;
+﻿using System.Collections;
+using System.Collections.Specialized;
 using System.Diagnostics;
-using System.Management.Automation.Runspaces;
 using System.Management.Automation;
+using System.Management.Automation.Runspaces;
 using Actions.Core.Services;
 using Actions.Core.Summaries;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+
+namespace AutoUpdate;
 
 internal class Worker(ICoreService core, IConfiguration configuration, IHostApplicationLifetime lifetime) : IHostedService
 {
@@ -30,13 +32,13 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 break;
             }
 
-//#if DEBUG
-//            if (!directory.EndsWith("sqltoolbelt"))
-//            {
-//                continue;
-//            }
-//#endif
-            
+#if DEBUG
+            if (!directory.EndsWith("sql-server-2019-cumulative-update"))
+            {
+                continue;
+            }
+#endif
+
             core.StartGroup(directory);
 
             try
@@ -63,7 +65,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     ps.AddScript("$ErrorView = 'DetailedView'").Invoke();
 
                     var output = ps.AddScript(await File.ReadAllTextAsync(Path.Combine(directory, "update.ps1"), cancellationToken))
-                    .Invoke();
+                        .Invoke();
 
                     if (cancellationToken.IsCancellationRequested)
                     {
@@ -109,6 +111,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                             }
 
                         });
+
 
                         // Streams logging
                         if (auPackage.Properties["Streams"].Value is OrderedDictionary streams)
@@ -174,6 +177,46 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                         summaryRows.Add(new SummaryTableRow([new(name), new(tagName)]));
                     }
+
+                    // submit to VirusTotal
+                    if (auPackage.Properties["Files"]?.Value is string[] files)
+                    {
+                        foreach (var file in files.Distinct())
+                        {
+                            if (!File.Exists(file))
+                            {
+                                continue;
+                            }
+
+                            var f = new FileInfo(file);
+                            // get file size
+                            Console.WriteLine($"\t{file}, Size: {f.Length:N0} bytes");
+
+                            var key = Environment.GetEnvironmentVariable("VT_APIKEY");
+
+                            // if file size is greater than 650M, skip as VirusTotal has a limit of 650M
+                            if (f.Length > 650 * 1024 * 1024)
+                            {
+                                core.WriteWarning("File size is greater than 650M, skipping VirusTotal scan");
+                                continue;
+                            }
+
+                            if (key == null)
+                            {
+                                core.WriteWarning("No VirusTotal API key found");
+                                continue;
+                            }
+
+                            core.WriteInfo("Submitting file to VirusTotal");
+                            // vt.exe scan file $File --apikey $env:VT_APIKEY
+                            var vtResult = RunProcess(directory, "vt.exe", $"scan file {file} --apikey {key}", true, TimeSpan.FromMinutes(7));
+
+                            if (!vtResult)
+                            {
+                                core.WriteWarning("VirusTotal scan failed");
+                            }
+                        }
+                    }
                 }
                 else
                 {
@@ -209,7 +252,10 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             core.Summary.AddRawMarkdown("No packages were updated");
         }
 
-        await core.Summary.WriteAsync(new SummaryWriteOptions { Overwrite = true });
+        if (Summary.IsAvailable)
+        {
+            await core.Summary.WriteAsync(new SummaryWriteOptions { Overwrite = true });
+        }
 
         lifetime.StopApplication();
     }
@@ -267,7 +313,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
         string eOut = string.Empty;
         p.ErrorDataReceived += (_, e) =>
-        { eOut += e.Data; };
+            { eOut += e.Data; };
 
         p.Start();
 
