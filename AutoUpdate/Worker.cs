@@ -33,7 +33,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             }
 
 #if DEBUG
-            if (!directory.EndsWith("sql-server-2019-cumulative-update"))
+            if (!directory.EndsWith("azure-functions-core-tools"))
             {
                 continue;
             }
@@ -137,6 +137,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                 if (ps.HadErrors)
                 {
+                    core.WriteWarning("PowerShell reported some errors");
                     continue;
                 }
 
@@ -145,6 +146,8 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                 if (nupkgFile != null && auPackage != null)
                 {
+                    core.WriteInfo($"Found nupkg file: {nupkgFile}");
+
                     // try pushing to chocolatey
                     bool result = true;
                     if (_chocolateyApiKey != null || !nupkgFile.Contains("azure-functions-core-tools")) // azure-functions-core-tools is not our package, but we want to submit to VirusTotal
@@ -167,7 +170,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                         string name = (string) auPackage.Properties["Name"].Value;
                         string tagName = $"{name}-{auPackage.Properties["RemoteVersion"].Value}";
 
-                        string tagArguments = $"tag -a {tagName} -m '{tagName}'";
+                        string tagArguments = $"tag -f -a {tagName} -m '{tagName}'";
 
                         core.WriteDebug($"git {tagArguments}");
 
@@ -325,14 +328,23 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         p.WaitForExit(timeout);
 
         // get output from process
-        core.WriteDebug(output);
+        if (!string.IsNullOrEmpty(output))
+        {
+            core.WriteInfo(output);
+        }
 
         if (errorsAsWarnings)
         {
-            core.WriteWarning(eOut);
+            if (!string.IsNullOrEmpty(eOut))
+            {
+                core.WriteWarning(eOut);
+            }
         } else
         {
-            core.WriteError(eOut);
+            if (!string.IsNullOrEmpty(eOut))
+            {
+                core.WriteError(eOut);
+            }
         }
 
         return p.ExitCode == 0;
