@@ -147,7 +147,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 {
                     // try pushing to chocolatey
                     bool result = true;
-                    if (_chocolateyApiKey != null)
+                    if (_chocolateyApiKey != null || !nupkgFile.Contains("azure-functions-core-tools")) // azure-functions-core-tools is not our package, but we want to submit to VirusTotal
                     {
                         string chocoArguments = $"push {nupkgFile} --api-key {_chocolateyApiKey} --source https://push.chocolatey.org/ --verbose";
                         core.WriteDebug($"choco {chocoArguments}");
