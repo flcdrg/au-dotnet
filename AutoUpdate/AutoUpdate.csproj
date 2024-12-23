@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <PackageReference Include="GitHub.Actions.Core" Version="8.1.1" />
+    <PackageReference Include="GitHub.Actions.Core" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="9.0.0" />
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.6" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.4.6" />
