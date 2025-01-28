@@ -141,46 +141,47 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     continue;
                 }
 
-                // Check if .nupkg file exists
-                var nupkgFile = Directory.GetFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).FirstOrDefault();
+                // Check if .nupkg file(s) exists
+                var nupkgFiles = Directory.GetFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).ToList();
 
-                if (nupkgFile != null && auPackage != null)
+                if (nupkgFiles.Any() && auPackage != null)
                 {
-                    core.WriteInfo($"Found nupkg file: {nupkgFile}");
+                    foreach (var nupkgFile in nupkgFiles) {
+                        core.WriteInfo($"Found nupkg file: {nupkgFile}");
 
-                    // try pushing to chocolatey
-                    bool result = true;
-                    if (_chocolateyApiKey != null || !nupkgFile.Contains("azure-functions-core-tools")) // azure-functions-core-tools is not our package, but we want to submit to VirusTotal
-                    {
-                        string chocoArguments = $"push {nupkgFile} --api-key {_chocolateyApiKey} --source https://push.chocolatey.org/ --verbose";
-                        core.WriteDebug($"choco {chocoArguments}");
-                        result = RunProcess(directory, "choco.exe", chocoArguments, false, TimeSpan.FromMinutes(3));
+                        // try pushing to chocolatey
+                        bool result = true;
+                        if (_chocolateyApiKey != null || !nupkgFile.Contains("azure-functions-core-tools")) // azure-functions-core-tools is not our package, but we want to submit to VirusTotal
+                        {
+                            string chocoArguments = $"push {nupkgFile} --api-key {_chocolateyApiKey} --source https://push.chocolatey.org/ --verbose";
+                            core.WriteDebug($"choco {chocoArguments}");
+                            result = RunProcess(directory, "choco.exe", chocoArguments, false, TimeSpan.FromMinutes(3));
+                        }
+                        else
+                        {
+                            core.WriteDebug($"[whatif] choco push {nupkgFile}");
+                        }
+
+                        if (result)
+                        {
+                            RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
+
+                            // RemoteVersion: 2024.1-EAP05
+                            // NuspecVersion: 2024.1-EAP02
+                            string name = (string) auPackage.Properties["Name"].Value;
+                            string tagName = $"{name}-{auPackage.Properties["RemoteVersion"].Value}";
+
+                            string tagArguments = $"tag -f -a {tagName} -m '{tagName}'";
+
+                            core.WriteDebug($"git {tagArguments}");
+
+                            RunProcess(directory, "git.exe", tagArguments, true, TimeSpan.FromSeconds(10));
+
+                            count++;
+
+                            summaryRows.Add(new SummaryTableRow([new(name), new(tagName)]));
+                        }
                     }
-                    else
-                    {
-                        core.WriteDebug($"[whatif] choco push {nupkgFile}");
-                    }
-
-                    if (result)
-                    {
-                        RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
-
-                        // RemoteVersion: 2024.1-EAP05
-                        // NuspecVersion: 2024.1-EAP02
-                        string name = (string) auPackage.Properties["Name"].Value;
-                        string tagName = $"{name}-{auPackage.Properties["RemoteVersion"].Value}";
-
-                        string tagArguments = $"tag -f -a {tagName} -m '{tagName}'";
-
-                        core.WriteDebug($"git {tagArguments}");
-
-                        RunProcess(directory, "git.exe", tagArguments, true, TimeSpan.FromSeconds(10));
-
-                        count++;
-
-                        summaryRows.Add(new SummaryTableRow([new(name), new(tagName)]));
-                    }
-
                     // submit to VirusTotal
                     if (auPackage.Properties["Files"]?.Value is string[] files)
                     {
