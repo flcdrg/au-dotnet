@@ -45,16 +45,14 @@ jobs:
 
       - name: Install
         run: |
+          # Install Chocolatey-AU module
           $module_name = 'Chocolatey-AU'
-
           $module_dst  = "$Env:ProgramFiles\PowerShell\Modules\$module_name"
-
           New-Item -ItemType Directory "$module_dst" -ErrorAction Ignore | Out-Null
-
           Copy-Item -Recurse -Force ./src/* $module_dst -Verbose
-
           Get-InstalledModule | Select-Object Name, Version, InstalledLocation
 
+          # Install vt-cli
           choco install vt-cli -y
         shell: pwsh
         working-directory: chocolatey-au
@@ -92,8 +90,8 @@ jobs:
       - name: Get version
         id: version
         run: |
-          echo "$GitBuildVersionSimple"
-          echo "GitBuildVersionSimple=$GitBuildVersionSimple" >> "$GITHUB_OUTPUT"
+          echo "$env:GitBuildVersionSimple"
+          echo "GitBuildVersionSimple=$($env:GitBuildVersionSimple)" >> "$env:GITHUB_OUTPUT"
 
       - name: Dump environment
         run: printenv | sort
