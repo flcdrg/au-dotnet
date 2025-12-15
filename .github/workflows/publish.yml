@@ -1,0 +1,66 @@
+name: Publish
+
+on:
+  release:
+    types: # https://docs.github.com/en/developers/webhooks-and-events/webhook-events-and-payloads#release
+      - released
+      - prereleased
+
+jobs:
+  dump:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+
+    steps:
+      - name: Dump GitHub context
+        env:
+          GITHUB_CONTEXT: ${{ toJson(github) }}
+        run: echo "$GITHUB_CONTEXT"
+
+  nuget:
+    runs-on: ubuntu-latest
+
+    environment: production
+
+    permissions:
+      contents: read
+      packages: write
+      id-token: write # enable GitHub OIDC token issuance for this job
+
+    env:
+      source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+
+    steps:
+      - name: Download Assets
+        uses: i3h/download-release-asset@v1.3.3
+        with:
+          owner: ${{ github.event.repository.owner.login }}
+          repo: ${{ github.event.repository.name }}
+          tag: ${{ github.event.release.tag_name }}
+          file: /.+/
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List directory
+        run: ls -lR
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 10.0.x
+          source-url: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+        env:
+          NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+      - name: Publish to GPR
+        run: dotnet nuget push *.nupkg --source ${{ env.source-url }} -k ${{ secrets.GITHUB_TOKEN }} --skip-duplicate
+
+      - name: NuGet login (OIDC → temp API key)
+        uses: NuGet/login@v1
+        id: login
+        with:
+          user: ${{ secrets.NUGET_USER }} # Recommended: use a secret like ${{ secrets.NUGET_USER }} for your nuget.org username (profile name), NOT your email address
+
+      - name: Publish to NuGet.org
+        run: dotnet nuget push *.nupkg --source https://api.nuget.org/v3/index.json --api-key ${{steps.login.outputs.NUGET_API_KEY}}
