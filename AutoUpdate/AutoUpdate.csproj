@@ -1,9 +1,23 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <TargetFramework>net9.0</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+    <PackAsTool>true</PackAsTool>
+    <PackageId>flcdrg.AU</PackageId>
+    <ToolCommandName>audotnet</ToolCommandName>
+    <PackageOutputPath>./nupkg</PackageOutputPath>
+    <Title>AU.NET for Chocolatey</Title>
+    <Authors>flcdrg</Authors>
+    <Copyright>David Gardiner</Copyright>
+    <PackageProjectUrl>https://github.com/flcdrg/au-dotnet</PackageProjectUrl>
+    <PackageTags>Chocolatey</PackageTags>
+    <Description>A tool for Chocolatey package maintainers to automate updates</Description>
+    <ContainerFamily>alpine</ContainerFamily>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="GitHub.Actions.Core" Version="9.0.0" />
@@ -11,5 +25,8 @@
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.5.4" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
     <PackageReference Include="System.Management.Automation" Version="7.5.4" />
+  </ItemGroup>
+    <ItemGroup>
+    <None Include="../README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 </Project>
