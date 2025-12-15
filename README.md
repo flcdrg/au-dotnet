@@ -1,12 +1,12 @@
-# au-dotnet
+# flcdrg.AU
 
 Chocolatey package automatic updates using .NET.
 
-This is an alternative to the AU PowerShell module for coordinating package updates across multiple packages. It still makes use of the AU module for calling the `update.ps1` scripts.
+This is an alternative to the Chocolatey-AU PowerShell module's `Update-AUPackages.ps1` function for coordinating package updates across multiple packages. It still makes use of the Chocolatey-AU module for calling the `update.ps1` scripts.
 
 ## Overview
 
-`au-dotnet` is a .NET global tool for automating Chocolatey package updates. It scans a repository of Chocolatey package definitions, executes their `update.ps1` scripts, and manages the package update lifecycle. This tool is particularly useful for maintaining multiple Chocolatey packages in a single repository.
+`flcdrg.AU` is a .NET global tool for automating Chocolatey package updates. It scans a repository of Chocolatey package definitions, executes their `update.ps1` scripts, and manages the package update lifecycle. This tool is particularly useful for maintaining multiple Chocolatey packages in a single repository.
 
 ## Features
 
@@ -16,30 +16,26 @@ This is an alternative to the AU PowerShell module for coordinating package upda
 - **Package Management**: Automatically handles package building, testing, and publishing to Chocolatey
 - **Summary Reports**: Generates detailed summary reports of update operations
 
-## Installation
-
-Install as a .NET global tool:
-
-```bash
-dotnet tool install -g choco-au
-```
-
-## Usage
-
-### Using .NET 10 SDK
+## Using .NET 10 SDK
 
 With .NET 10 SDK, you can execute the tool using the new `dnx` command:
 
 ```bash
-dnx choco-au
+dnx flcdrg.au
 ```
 
-### Traditional Method
+## Installation as .NET global tool
 
-Alternatively, use the traditional tool invocation:
+Install as a .NET global tool:
 
 ```bash
-choco-au
+dotnet tool install -g flcdrg.au
+```
+
+And run:
+
+```bash
+audotnet
 ```
 
 ## Configuration
@@ -69,6 +65,6 @@ The tool can be configured using environment variables:
 
 The tool includes built-in support for GitHub Actions workflows, making it easy to automate package updates in CI/CD pipelines.
 
-## License
+## Example usage
 
-Apache-2.0
+See the <https://github.com/flcdrg/au-packages/> repository for an example of the tool being used. In particular the [CI](https://github.com/flcdrg/au-packages/blob/master/.github/workflows/ci.yml) workflow.

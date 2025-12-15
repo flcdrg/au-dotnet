@@ -4,17 +4,11 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.gitignore'
-      - '**/*.gitattributes'
+
   pull_request:
     branches:
       - main
-    paths-ignore:
-      - '**/*.md'
-      - '**/*.gitignore'
-      - '**/*.gitattributes'
+
   workflow_dispatch:
 
 jobs:
@@ -42,115 +36,115 @@ jobs:
       GitBuildVersionSimple: ${{ steps.version.outputs.GitBuildVersionSimple }}
 
     steps:
-    - uses: actions/checkout@v6
-      with:
-        repository: 'flcdrg/chocolatey-au'
-        path: 'chocolatey-au'
-        ref: 'simplify'
-        persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: "flcdrg/chocolatey-au"
+          path: "chocolatey-au"
+          ref: "simplify"
+          persist-credentials: false
 
-    - name: Install
-      run: |
-        $module_name = 'Chocolatey-AU'
+      - name: Install
+        run: |
+          $module_name = 'Chocolatey-AU'
 
-        $module_dst  = "$Env:ProgramFiles\PowerShell\Modules\$module_name"
+          $module_dst  = "$Env:ProgramFiles\PowerShell\Modules\$module_name"
 
-        New-Item -ItemType Directory "$module_dst" -ErrorAction Ignore | Out-Null
+          New-Item -ItemType Directory "$module_dst" -ErrorAction Ignore | Out-Null
 
-        Copy-Item -Recurse -Force ./src/* $module_dst -Verbose
+          Copy-Item -Recurse -Force ./src/* $module_dst -Verbose
 
-        Get-InstalledModule | Select-Object Name, Version, InstalledLocation
+          Get-InstalledModule | Select-Object Name, Version, InstalledLocation
 
-        choco install vt-cli -y
-      shell: pwsh
-      working-directory: chocolatey-au
+          choco install vt-cli -y
+        shell: pwsh
+        working-directory: chocolatey-au
 
-    - uses: actions/checkout@v6
-      with:
-        path: 'autoupdate'
-        persist-credentials: false
-        fetch-depth: 0
+      - uses: actions/checkout@v6
+        with:
+          path: "autoupdate"
+          persist-credentials: false
+          fetch-depth: 0
 
-    - name: Setup .NET SDK
-      uses: actions/setup-dotnet@v5
-      with:
-        global-json-file: autoupdate/global.json
-        source-url: ${{ env.source-url }}
-      env:
-        NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v5
+        with:
+          global-json-file: autoupdate/global.json
+          source-url: ${{ env.source-url }}
+        env:
+          NUGET_AUTH_TOKEN: ${{secrets.GITHUB_TOKEN}}
 
-    - name: Cache dependencies
-      uses: actions/cache@v4
-      with:
-        path: ${{ github.workspace }}/.nuget/packages
-        key: ${{ runner.os }}-dotnet-${{ hashFiles('**/AutoUpdate/*.csproj') }}
-        restore-keys: |
-          ${{ runner.os }}-dotnet-
+      - name: Cache dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/.nuget/packages
+          key: ${{ runner.os }}-dotnet-${{ hashFiles('**/AutoUpdate/*.csproj') }}
+          restore-keys: |
+            ${{ runner.os }}-dotnet-
 
-    - name: Restore
-      run: dotnet restore
-      working-directory: autoupdate
+      - name: Restore
+        run: dotnet restore
+        working-directory: autoupdate
 
-    - name: Build
-      run: dotnet build --no-restore
-      working-directory: autoupdate
+      - name: Build
+        run: dotnet build --no-restore
+        working-directory: autoupdate
 
-    - name: Get version
-      id: version
-      run: |
-        echo "$GitBuildVersionSimple"
-        echo "GitBuildVersionSimple=$GitBuildVersionSimple" >> "$GITHUB_OUTPUT"
+      - name: Get version
+        id: version
+        run: |
+          echo "$GitBuildVersionSimple"
+          echo "GitBuildVersionSimple=$GitBuildVersionSimple" >> "$GITHUB_OUTPUT"
 
-    - name: Dump environment
-      run: printenv | sort
+      - name: Dump environment
+        run: printenv | sort
 
-    - name: Test
-      run: dotnet test
-      working-directory: autoupdate
+      - name: Test
+        run: dotnet test
+        working-directory: autoupdate
 
-    - name: Pack
-      run: dotnet pack
-      working-directory: autoupdate
-    
-    - name: Test install
-      run: |
-        dir AutoUpdate/nupkg
+      - name: Pack
+        run: dotnet pack
+        working-directory: autoupdate
 
-        dotnet tool install --global flcdrg.AU --source AutoUpdate/nupkg --version $env:NBGV_SemVer2
-      working-directory: autoupdate
-        
-    - uses: actions/checkout@v6
-      with:
-        repository: 'flcdrg/au-packages'
-        path: 'packages'
+      - name: Test install
+        run: |
+          dir AutoUpdate/nupkg
 
-    - name: Configure Git
-      run: |
-        git config user.email "david@gardinerfamily.au"
-        git config user.name "David Gardiner"
-      working-directory: packages
+          dotnet tool install --global flcdrg.AU --source AutoUpdate/nupkg --version $env:NBGV_SemVer2
+        working-directory: autoupdate
 
-    - name: Run
-      run: |
-        dotnet run
-      working-directory: autoupdate/AutoUpdate
-      env:
-        PACKAGES_REPO: '${{ github.workspace }}/packages'
+      - uses: actions/checkout@v6
+        with:
+          repository: "flcdrg/au-packages"
+          path: "packages"
 
-    - name: Status
-      run: |
-        git status
+      - name: Configure Git
+        run: |
+          git config user.email "david@gardinerfamily.au"
+          git config user.name "David Gardiner"
+        working-directory: packages
 
-        git log --max-count 1 --pretty=medium
+      - name: Run
+        run: |
+          dotnet run
+        working-directory: autoupdate/AutoUpdate
+        env:
+          PACKAGES_REPO: "${{ github.workspace }}/packages"
 
-        Get-ChildItem -Recurse *.nupkg | Select-Object -ExpandProperty FullName
-      working-directory: packages
+      - name: Status
+        run: |
+          git status
 
-    - name: NuGet package
-      uses: actions/upload-artifact@v6
-      with:
-        name: nupkg
-        path: autoupdate/AutoUpdate/nupkg/*.nupkg
+          git log --max-count 1 --pretty=medium
+
+          Get-ChildItem -Recurse *.nupkg | Select-Object -ExpandProperty FullName
+        working-directory: packages
+
+      - name: NuGet package
+        uses: actions/upload-artifact@v6
+        with:
+          name: nupkg
+          path: autoupdate/AutoUpdate/nupkg/*.nupkg
 
   update_release_draft:
     name: Update release draft
