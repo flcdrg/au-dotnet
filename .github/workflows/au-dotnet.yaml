@@ -185,7 +185,7 @@ jobs:
       - name: Upload assets
         uses: xresloader/upload-to-github-release@v1
         with:
-          file: "artifacts/nupkg/*.nupkg"
-          delete_file: "*.nupkg;*.tar.gz"
+          file: "artifacts/*.nupkg"
+          delete_file: "*.nupkg"
           overwrite: true
           release_id: ${{ steps.create_release.outputs.id }}
