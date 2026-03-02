@@ -139,7 +139,7 @@ jobs:
         working-directory: packages
 
       - name: NuGet package
-        uses: actions/upload-artifact@v6
+        uses: actions/upload-artifact@v7
         with:
           name: nupkg
           path: autoupdate/AutoUpdate/nupkg/*.nupkg
