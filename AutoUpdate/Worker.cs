@@ -7,11 +7,18 @@ using Actions.Core.Services;
 using Actions.Core.Summaries;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
+using System.Text.RegularExpressions;
 
 namespace AutoUpdate;
 
 internal class Worker(ICoreService core, IConfiguration configuration, IHostApplicationLifetime lifetime) : IHostedService
 {
+    private static readonly Regex[] ErrorOutputPatterns =
+    [
+        new(@"Search pattern not found:", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+        new(@"^au_GetLatest failed$", RegexOptions.IgnoreCase | RegexOptions.Compiled),
+    ];
+
     private readonly string? _chocolateyApiKey = Environment.GetEnvironmentVariable("api_key");
     private readonly string _repoPath = configuration["PACKAGES_REPO"] ?? @"c:\dev\git\au-packages";
 
@@ -90,8 +97,8 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                             continue;
                         }
 
-                        Console.WriteLine("Package properties");
-                        Console.WriteLine("------------------");
+                        LogInfoMessage("Package properties");
+                        LogInfoMessage("------------------");
 
                         auPackage.Properties.ToList().ForEach(p => {
                             if (p.Value == null)
@@ -102,11 +109,11 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                             // when p.Value is string array, print out array, otherwise print out value
                             if (p.Value is string[] array)
                             {
-                                Console.WriteLine($"\t{p.Name}: {string.Join("\n\t\t", array)}");
+                                LogInfoMessage($"\t{p.Name}: {string.Join("\n\t\t", array)}");
                             }
                             else
                             {
-                                Console.WriteLine($"\t{p.Name}: {p.Value}");
+                                LogClassifiedMessage($"\t{p.Name}: {p.Value}");
 
                             }
 
@@ -116,14 +123,14 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                         // Streams logging
                         if (auPackage.Properties["Streams"].Value is OrderedDictionary streams)
                         {
-                            Console.WriteLine("Stream properties");
-                            Console.WriteLine("-----------------");
+                            LogInfoMessage("Stream properties");
+                            LogInfoMessage("-----------------");
                             foreach (DictionaryEntry stream in streams)
                             {
-                                Console.WriteLine($"{stream.Key}: {stream.Value}");
+                                LogInfoMessage($"{stream.Key}: {stream.Value}");
                                 if (stream.Value is Hashtable streamObj)
                                 {
-                                    streamObj.Keys.Cast<string>().ToList().ForEach(k => Console.WriteLine($"\t{k}: {streamObj[k]}"));
+                                    streamObj.Keys.Cast<string>().ToList().ForEach(k => LogInfoMessage($"\t{k}: {streamObj[k]}"));
                                 }
                             }
                         }
@@ -131,7 +138,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 }
                 catch (Exception ex)
                 {
-                    Console.WriteLine(ex.Message);
+                    core.WriteError(ex.Message);
                     continue;
                 }
 
@@ -194,7 +201,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
                             var f = new FileInfo(file);
                             // get file size
-                            Console.WriteLine($"\t{file}, Size: {f.Length:N0} bytes");
+                            LogInfoMessage($"\t{file}, Size: {f.Length:N0} bytes");
 
                             var key = Environment.GetEnvironmentVariable("VT_APIKEY");
 
@@ -224,7 +231,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 }
                 else
                 {
-                    Console.WriteLine("No nupkg file found");
+                    LogInfoMessage("No nupkg file found");
                 }
                 //break;
             }
@@ -243,7 +250,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         if (count > 0)
         {
             string commitArguments = $"commit -m \"AU-dotnet: {count} updated\n[skip ci]\"";
-            Console.WriteLine($"git {commitArguments}");
+            LogInfoMessage($"git {commitArguments}");
             RunProcess(_repoPath, "git", commitArguments, true, TimeSpan.FromMinutes(1));
 
             var table = new SummaryTable(new SummaryTableRow([new("Package"), new SummaryTableCell("Version")]), summaryRows.ToArray());
@@ -297,6 +304,34 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
     public Task StopAsync(CancellationToken cancellationToken)
     {
         return Task.CompletedTask;
+    }
+
+    private void LogInfoMessage(string message)
+    {
+        foreach (var line in SplitLines(message))
+        {
+            core.WriteInfo(line);
+        }
+    }
+
+    private void LogClassifiedMessage(string message)
+    {
+        foreach (var line in SplitLines(message))
+        {
+            if (ErrorOutputPatterns.Any(pattern => pattern.IsMatch(line)))
+            {
+                core.WriteError(line);
+                continue;
+            }
+
+            core.WriteInfo(line);
+        }
+    }
+
+    private static IEnumerable<string> SplitLines(string value)
+    {
+        return value.Replace("\r\n", "\n", StringComparison.Ordinal)
+            .Split('\n', StringSplitOptions.None);
     }
 
     bool RunProcess(string workingDirectory, string executable, string arguments, bool errorsAsWarnings, TimeSpan timeout)
