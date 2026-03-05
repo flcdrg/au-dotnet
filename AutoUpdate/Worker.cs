@@ -21,6 +21,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
     private readonly string? _chocolateyApiKey = Environment.GetEnvironmentVariable("api_key");
     private readonly string _repoPath = configuration["PACKAGES_REPO"] ?? @"c:\dev\git\au-packages";
+    private bool _hasLoggedErrors;
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
@@ -138,7 +139,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 }
                 catch (Exception ex)
                 {
-                    core.WriteError(ex.Message);
+                    LogErrorMessage(ex.Message);
                     continue;
                 }
 
@@ -244,6 +245,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         if (cancellationToken.IsCancellationRequested)
         {
             core.WriteWarning("Cancellation requested");
+            ApplyExitCodeFromLoggedErrors();
             return;
         }
 
@@ -268,6 +270,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             await core.Summary.WriteAsync(new SummaryWriteOptions { Overwrite = true });
         }
 
+        ApplyExitCodeFromLoggedErrors();
         lifetime.StopApplication();
     }
 
@@ -284,7 +287,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         };
         ps.Streams.Error.DataAdded += (_, args) =>
         {
-            core.WriteError(ps.Streams.Error[args.Index].ToString());
+            LogErrorMessage(ps.Streams.Error[args.Index].ToString());
         };
         ps.Streams.Warning.DataAdded += (_, args) =>
         {
@@ -320,7 +323,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         {
             if (ErrorOutputPatterns.Any(pattern => pattern.IsMatch(line)))
             {
-                core.WriteError(line);
+                LogErrorMessage(line);
                 continue;
             }
 
@@ -332,6 +335,23 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
     {
         return value.Replace("\r\n", "\n", StringComparison.Ordinal)
             .Split('\n', StringSplitOptions.None);
+    }
+
+    private void LogErrorMessage(string message)
+    {
+        _hasLoggedErrors = true;
+        foreach (var line in SplitLines(message))
+        {
+            core.WriteError(line);
+        }
+    }
+
+    private void ApplyExitCodeFromLoggedErrors()
+    {
+        if (_hasLoggedErrors)
+        {
+            Environment.ExitCode = 1;
+        }
     }
 
     bool RunProcess(string workingDirectory, string executable, string arguments, bool errorsAsWarnings, TimeSpan timeout)
@@ -379,7 +399,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         {
             if (!string.IsNullOrEmpty(eOut))
             {
-                core.WriteError(eOut);
+                LogErrorMessage(eOut);
             }
         }
 
