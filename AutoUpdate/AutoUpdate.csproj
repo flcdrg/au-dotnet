@@ -22,9 +22,9 @@
   <ItemGroup>
     <PackageReference Include="GitHub.Actions.Core" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.5" />
-    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.5.4" />
+    <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.5.5" />
     <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.5.4" />
-    <PackageReference Include="System.Management.Automation" Version="7.5.4" />
+    <PackageReference Include="System.Management.Automation" Version="7.5.5" />
   </ItemGroup>
     <ItemGroup>
     <None Include="../README.md" Pack="true" PackagePath="\" />
