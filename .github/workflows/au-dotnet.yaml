@@ -64,7 +64,7 @@ jobs:
           fetch-depth: 0
 
       - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v5
+        uses: actions/setup-dotnet@v6
         with:
           global-json-file: autoupdate/global.json
           source-url: ${{ env.source-url }}
