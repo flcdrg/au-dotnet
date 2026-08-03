@@ -23,7 +23,7 @@
     <PackageReference Include="GitHub.Actions.Core" Version="9.0.0" />
     <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
     <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.6.4" />
-    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.3" />
+    <PackageReference Include="Microsoft.PowerShell.SDK" Version="7.6.4" />
     <PackageReference Include="System.Management.Automation" Version="7.6.4" />
   </ItemGroup>
     <ItemGroup>
