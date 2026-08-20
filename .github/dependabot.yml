@@ -14,3 +14,8 @@ updates:
     directory: "/" # Location of package manifests
     schedule:
       interval: "weekly"
+    groups:
+      nget:
+        patterns:
+          - "System.Management.Automation"
+          - "Microsoft.PowerShell.*"
