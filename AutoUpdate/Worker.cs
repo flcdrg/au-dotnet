@@ -34,6 +34,8 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         var summaryRows = new List<SummaryTableRow>();
         foreach (var directory in directories)
         {
+            var packageName = Path.GetFileName(directory);
+
             if (cancellationToken.IsCancellationRequested)
             {
                 core.WriteWarning("Cancellation requested");
@@ -51,7 +53,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
             try
             {
-                var ps = CreatePowerShell();
+                var ps = CreatePowerShell(packageName);
 
                 // Skip this directory if any existing .nupkg files
                 if (Directory.EnumerateFiles(directory, "*.nupkg", SearchOption.TopDirectoryOnly).Any())
@@ -114,7 +116,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                             }
                             else
                             {
-                                LogClassifiedMessage($"\t{p.Name}: {p.Value}");
+                                LogClassifiedMessage($"\t{p.Name}: {p.Value}", packageName);
 
                             }
 
@@ -139,7 +141,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                 }
                 catch (Exception ex)
                 {
-                    LogErrorMessage(ex.Message);
+                    LogErrorMessage(ex.Message, packageName);
                     continue;
                 }
 
@@ -274,7 +276,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         lifetime.StopApplication();
     }
 
-    private PowerShell CreatePowerShell()
+    private PowerShell CreatePowerShell(string packageName)
     {
         var iss = InitialSessionState.CreateDefault2();
         iss.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.RemoteSigned;
@@ -287,7 +289,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         };
         ps.Streams.Error.DataAdded += (_, args) =>
         {
-            LogErrorMessage(ps.Streams.Error[args.Index].ToString());
+            LogErrorMessage(ps.Streams.Error[args.Index].ToString(), packageName);
         };
         ps.Streams.Warning.DataAdded += (_, args) =>
         {
@@ -317,13 +319,13 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         }
     }
 
-    private void LogClassifiedMessage(string message)
+    private void LogClassifiedMessage(string message, string? packageName = null)
     {
         foreach (var line in SplitLines(message))
         {
             if (ErrorOutputPatterns.Any(pattern => pattern.IsMatch(line)))
             {
-                LogErrorMessage(line);
+                LogErrorMessage(line, packageName);
                 continue;
             }
 
@@ -337,12 +339,12 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
             .Split('\n', StringSplitOptions.None);
     }
 
-    private void LogErrorMessage(string message)
+    private void LogErrorMessage(string message, string? packageName = null)
     {
         _hasLoggedErrors = true;
         foreach (var line in SplitLines(message))
         {
-            core.WriteError(line);
+            core.WriteError(packageName is null ? line : $"[{packageName}] {line}");
         }
     }
 
@@ -399,7 +401,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
         {
             if (!string.IsNullOrEmpty(eOut))
             {
-                LogErrorMessage(eOut);
+                LogErrorMessage(eOut, Path.GetFileName(workingDirectory));
             }
         }
 
