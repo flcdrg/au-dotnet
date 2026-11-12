@@ -128,6 +128,7 @@ jobs:
         working-directory: autoupdate/AutoUpdate
         env:
           PACKAGES_REPO: "${{ github.workspace }}/packages"
+          github_api_key: ${{ github.token }} # GitHub Actions token
 
       - name: Status
         run: |
