@@ -1,8 +1,11 @@
 ﻿using System.Collections;
 using System.Collections.Specialized;
 using System.Diagnostics;
+using System.IO.Compression;
 using System.Management.Automation;
 using System.Management.Automation.Runspaces;
+using System.Xml;
+using System.Xml.Linq;
 using Actions.Core.Services;
 using Actions.Core.Summaries;
 using Microsoft.Extensions.Configuration;
@@ -159,6 +162,18 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                     foreach (var nupkgFile in nupkgFiles) {
                         core.WriteInfo($"Found nupkg file: {nupkgFile}");
 
+                        string name;
+                        string version;
+                        try
+                        {
+                            (name, version) = ReadPackageIdentity(nupkgFile);
+                        }
+                        catch (Exception ex) when (ex is IOException or InvalidDataException or XmlException or UnauthorizedAccessException)
+                        {
+                            LogErrorMessage($"Cannot read package metadata from '{nupkgFile}': {ex.Message}", packageName);
+                            continue;
+                        }
+
                         // try pushing to chocolatey
                         bool result = true;
                         if (_chocolateyApiKey != null || !nupkgFile.Contains("azure-functions-core-tools")) // azure-functions-core-tools is not our package, but we want to submit to VirusTotal
@@ -176,10 +191,7 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
                         {
                             RunProcess(directory, "git.exe", "add *", true, TimeSpan.FromSeconds(30));
 
-                            // RemoteVersion: 2024.1-EAP05
-                            // NuspecVersion: 2024.1-EAP02
-                            string name = (string) auPackage.Properties["Name"].Value;
-                            string tagName = $"{name}-{auPackage.Properties["RemoteVersion"].Value}";
+                            string tagName = $"{name}-{version}";
 
                             string tagArguments = $"tag -f -a {tagName} -m '{tagName}'";
 
@@ -274,6 +286,33 @@ internal class Worker(ICoreService core, IConfiguration configuration, IHostAppl
 
         ApplyExitCodeFromLoggedErrors();
         lifetime.StopApplication();
+    }
+
+    private static (string Name, string Version) ReadPackageIdentity(string nupkgFile)
+    {
+        using var archive = ZipFile.OpenRead(nupkgFile);
+        var nuspecs = archive.Entries.Where(entry =>
+            entry.FullName.Equals(entry.Name, StringComparison.Ordinal) &&
+            entry.Name.EndsWith(".nuspec", StringComparison.OrdinalIgnoreCase)).ToArray();
+
+        if (nuspecs.Length != 1)
+        {
+            throw new InvalidDataException("Expected exactly one root .nuspec file.");
+        }
+
+        using var stream = nuspecs[0].Open();
+        var document = XDocument.Load(stream);
+        var root = document.Root;
+        var metadata = root?.Element(root.Name.Namespace + "metadata");
+        var name = metadata?.Element(metadata.Name.Namespace + "id")?.Value.Trim();
+        var version = metadata?.Element(metadata.Name.Namespace + "version")?.Value.Trim();
+
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(version))
+        {
+            throw new InvalidDataException("Package metadata must contain a non-empty id and version.");
+        }
+
+        return (name, version);
     }
 
     private PowerShell CreatePowerShell(string packageName)

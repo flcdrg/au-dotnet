@@ -14,7 +14,7 @@ This is an alternative to the Chocolatey-AU PowerShell module's `Update-AUPackag
 - **PowerShell Integration**: Leverages PowerShell SDK to execute update scripts seamlessly
 - **GitHub Actions Support**: Built-in integration with GitHub Actions Core for CI/CD workflows
 - **Package Management**: Automatically handles package building, testing, and publishing to Chocolatey
-- **Summary Reports**: Generates detailed summary reports of update operations
+- **Summary Reports**: Generates detailed summary reports using each built package's embedded ID and version, preserving prerelease versions across update streams. Git tags use the same per-package identity.
 
 ## Using .NET 10 SDK
 
